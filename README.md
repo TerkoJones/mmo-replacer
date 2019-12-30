@@ -2,7 +2,7 @@
 
 Reemplaza marcadores de posición del tipo %\<expression\>% en una cadena con los valores obtenidos de un objeto de contexto.
 \<expression\> puede contener cualquier expresión válida en javascript.
-El doble %(%%) hace de escape para la cadena %.
+El doble %(%%) hace de escape para el caracter %.
 
 ## uso
 ```ts

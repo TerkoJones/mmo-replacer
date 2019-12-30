@@ -79,6 +79,8 @@ var Replacer = (function (_super) {
 }(stream_1.Transform));
 function replacer(sandbox, message, options) {
     vm_1.createContext(sandbox);
+    if (options === true)
+        options = {};
     REX_PH_STRING.lastIndex = 0;
     return message.replace(REX_PH_STRING, function (m) {
         if (m === '%%')

@@ -10,7 +10,7 @@ declare type TClass = {
     prototype: any;
 };
 interface IReplacer {
-    (sandbox: object, message: string, options?: InspectOptions): string;
+    (sandbox: object, message: string, options?: InspectOptions | false): string;
     stream: (sandbox: Context, options?: InspectOptions | boolean) => Transform;
     inspector: TInspectFunction;
     stringifier: TStringifyFunction;
