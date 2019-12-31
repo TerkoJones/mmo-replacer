@@ -16,15 +16,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var util_1 = require("util");
 var vm_1 = require("vm");
 var stream_1 = require("stream");
-var REX_PH_STRING = /%%|%([\s\u0021-\u0024\u0026-\uffff]|%{2,})+%(?!%)/g;
-var REX_PH_STREAM = /(%%)|(%([\s\u0021-\u0024\u0026-\uffff]|%{2,})+%)|(%([\s\u0021-\u0024\u0026-\uffff]|%{2,})*$)/g;
+var $context = Symbol('context');
 var $inspect = Symbol('custom_inspect');
 var $stringify = Symbol('custom-uninspect');
+var REX_PH_STRING = /%%|%([\s\u0021-\u0024\u0026-\uffff]|%{2,})+%(?!%)/g;
+var REX_PH_STREAM = /(%%)|(%([\s\u0021-\u0024\u0026-\uffff]|%{2,})+%)|(%([\s\u0021-\u0024\u0026-\uffff]|%{2,})*$)/g;
 var _inspect = util_1.inspect;
 var _stringify = function (object) { return object.toString(); };
-function parse_expression(sandbox, expr, options) {
+function parse_expression(context, expr, options) {
     expr = '(' + expr.substr(1, expr.length - 2).replace(/%%/g, '%') + ')';
-    var val = vm_1.runInContext(expr, sandbox);
+    var val = vm_1.runInContext(expr, context);
     if (options === true)
         options = {};
     return options ?
@@ -39,9 +40,11 @@ function stringify(object) {
 }
 var Replacer = (function (_super) {
     __extends(Replacer, _super);
-    function Replacer(sandbox, options) {
+    function Replacer(context, options) {
         var _this = _super.call(this) || this;
-        _this._sandbox = vm_1.createContext(sandbox);
+        if (!context[$context])
+            context = contextualize(context);
+        _this._context = context;
         _this._options = options;
         return _this;
     }
@@ -67,7 +70,7 @@ var Replacer = (function (_super) {
                 from = chunk.length;
                 break;
             }
-            out += parse_expression(this._sandbox, m[0], this._options);
+            out += parse_expression(this._context, m[0], this._options);
             from = m.index + m[0].length;
         }
         if (from < chunk.length)
@@ -77,20 +80,21 @@ var Replacer = (function (_super) {
     };
     return Replacer;
 }(stream_1.Transform));
-function replacer(sandbox, message, options) {
-    vm_1.createContext(sandbox);
+function replacer(context, message, options) {
     if (options === true)
         options = {};
+    if (!context[$context])
+        context = contextualize(context);
     REX_PH_STRING.lastIndex = 0;
     return message.replace(REX_PH_STRING, function (m) {
         if (m === '%%')
             return '%';
-        return parse_expression(sandbox, m, options);
+        return parse_expression(context, m, options);
     });
 }
-function stream(sandbox, options) {
+function stream(context, options) {
     if (options === void 0) { options = false; }
-    return new Replacer(sandbox, options);
+    return new Replacer(context, options);
 }
 function customizeInspector(Class, inspect) {
     if (Class.prototype)
@@ -103,6 +107,15 @@ function customizeStringifier(Class, stringify) {
         Class.prototype[$stringify] = stringify;
     else
         throw new Error("No tiene prototipo");
+}
+function contextualize(object) {
+    if (object[$context])
+        return object;
+    object[$context] = true;
+    return vm_1.createContext(object);
+}
+function isContextualize(object) {
+    return object[$context];
 }
 exports.default = Object.defineProperties(replacer, {
     stream: {
@@ -147,6 +160,18 @@ exports.default = Object.defineProperties(replacer, {
     },
     stringify: {
         value: stringify,
+        enumerable: true,
+        writable: false,
+        configurable: false
+    },
+    contextualize: {
+        value: contextualize,
+        enumerable: true,
+        writable: false,
+        configurable: false
+    },
+    isContextualize: {
+        value: isContextualize,
         enumerable: true,
         writable: false,
         configurable: false
